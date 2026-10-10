@@ -176,7 +176,9 @@ write_env() {
 
 check_dns() {
   local resolved local_ips
-  resolved=$(getent ahostsv4 "$DOMAIN" 2>/dev/null | awk '{print $1}' | sort -u | tr '\n' ' ')
+  # getent exits 2 for an unknown name: under pipefail that must not end
+  # the install, a not-yet-propagated DNS record is only worth a warning.
+  resolved=$( (getent ahostsv4 "$DOMAIN" 2>/dev/null || true) | awk '{print $1}' | sort -u | tr '\n' ' ')
   local_ips=$(hostname -I 2>/dev/null || true)
   if [[ -z "$resolved" ]]; then
     warn "$DOMAIN ne pointe encore nulle part : crée un enregistrement DNS A vers ce serveur,"
