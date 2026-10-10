@@ -23,7 +23,7 @@ esac
 echo "==> system updates"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get -y upgrade
+apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold upgrade
 apt-get install -y --no-install-recommends \
   ca-certificates curl gnupg ufw fail2ban unattended-upgrades
 dpkg-reconfigure -f noninteractive unattended-upgrades

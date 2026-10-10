@@ -90,49 +90,54 @@ Toutes les options sont listées dans [.env.example](.env.example).
 
 Prérequis : un VPS Debian 12/13 ou Ubuntu 22.04/24.04 (x86_64 ou ARM), 2 Go
 de RAM minimum, et un sous-domaine (ex. `musique.mondomaine.fr`) avec un
-enregistrement DNS **A** (et **AAAA** si IPv6) vers l'IP du VPS.
+enregistrement DNS **A** (et **AAAA** si IPv6) vers l'IP du VPS. Crée le DNS
+d'abord : le certificat HTTPS en dépend.
 
-**1. Récupérer le projet sur le VPS** (Sunnify arrive en sous-module, figé
-sur un commit précis du dépôt officiel) :
+### En une ligne
+
+Connecté au VPS en SSH :
 
 ```bash
-ssh user@ton-vps
+curl -fsSL https://raw.githubusercontent.com/artenl/Spotifast/main/install.sh | sudo bash
+```
+
+Le script demande le domaine, l'e-mail pour les certificats et ton pseudo
+admin. Tu peux aussi tout passer d'un coup :
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/artenl/Spotifast/main/install.sh | sudo bash -s -- --domain musique.mondomaine.fr --email toi@mondomaine.fr --admin ton-pseudo
+```
+
+Ce qu'il fait :
+
+1. installe git et clone le projet dans `/opt/spotifast` (Sunnify en sous-module) ;
+2. sécurise le serveur avec `scripts/bootstrap-vps.sh` : mises à jour automatiques,
+   pare-feu (SSH, 80 et 443 seulement), fail2ban et Docker ;
+3. écrit `/opt/spotifast/.env` (lisible par root seulement) et vérifie le DNS ;
+4. construit l'image et démarre Caddy et l'application ;
+5. crée ton compte admin et affiche son mot de passe temporaire **une seule fois** ;
+6. vérifie que `https://ton-domaine` répond.
+
+**Pour mettre à jour, relance la même commande.** Elle récupère le code,
+reconstruit l'image avec la dernière version de yt-dlp et garde tes comptes
+et tes réglages. `--skip-bootstrap` saute l'étape 2 si tu gères le serveur
+toi-même. Tu peux lire le script avant de l'exécuter : [install.sh](install.sh).
+
+Connecte-toi ensuite sur `https://musique.mondomaine.fr` avec le mot de passe
+temporaire, choisis le tien, puis crée les comptes de tes amis depuis
+**Admin**.
+
+### À la main
+
+```bash
 sudo apt-get install -y git
-git clone --recurse-submodules https://github.com/artenl/Spotifast.git ~/spotifast
-cd ~/spotifast
-```
-
-**2. Préparer le VPS** (une seule fois) :
-
-```bash
-sudo bash scripts/bootstrap-vps.sh
-```
-
-**3. Configurer** :
-
-```bash
-cp .env.example .env
-nano .env        # DOMAIN=musique.mondomaine.fr, ACME_EMAIL=ton@email
-```
-
-**4. Lancer** (le premier build prend quelques minutes) :
-
-```bash
+sudo git clone --recurse-submodules https://github.com/artenl/Spotifast.git /opt/spotifast
+cd /opt/spotifast
+sudo bash scripts/bootstrap-vps.sh                  # une seule fois
+sudo cp .env.example .env && sudo nano .env         # DOMAIN=…, ACME_EMAIL=…
 sudo docker compose up -d --build
-sudo docker compose ps
-```
-
-Caddy obtient le certificat HTTPS tout seul au premier accès.
-
-**5. Créer ton compte admin** :
-
-```bash
 sudo docker compose exec app python -m spotifast.cli create-user ton-pseudo --admin
 ```
-
-Le mot de passe temporaire s'affiche. Va sur `https://musique.mondomaine.fr`,
-connecte-toi et choisis ton mot de passe. Crée ensuite les comptes de tes amis
-depuis **Admin**.
 
 **Recommandé : SSH par clé uniquement.** Si tu te connectes déjà au VPS avec
 une clé SSH, désactive les mots de passe SSH. Dans
@@ -143,12 +148,12 @@ la session en cours.
 
 ## Exploitation
 
-| Besoin | Commande (dans `~/spotifast`) |
+| Besoin | Commande (dans `/opt/spotifast`) |
 |---|---|
 | Journaux | `sudo docker compose logs -f app` |
 | Mettre yt-dlp à jour (si YouTube casse) | `sudo docker compose build --build-arg YTDLP_REFRESH=$(date +%s) app && sudo docker compose up -d` |
-| Mettre Spotifast à jour | `git pull --recurse-submodules && sudo docker compose up -d --build` |
-| Passer à une nouvelle version de Sunnify | `bash scripts/update-sunnify.sh` (sur ton Mac), commit + push, puis la ligne ci-dessus sur le VPS |
+| Mettre Spotifast à jour | relancer la commande d'installation en une ligne |
+| Passer à une nouvelle version de Sunnify | `bash scripts/update-sunnify.sh` (sur ton Mac), commit + push, puis relancer l'installation sur le VPS |
 | Lister les comptes | `sudo docker compose exec app python -m spotifast.cli list-users` |
 | Réinitialiser un mot de passe | `sudo docker compose exec app python -m spotifast.cli reset-password pseudo` |
 | Sauvegarder les comptes | `sudo docker run --rm -v spotifast_data:/d -v $PWD:/b alpine cp /d/spotifast.sqlite3 /b/` |

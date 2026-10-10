@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e '.[test]'
+      - run: python -m pytest -q
+
+  installer:
+    # Runs the real one-line installer on a fresh Ubuntu VM: Docker image
+    # build, compose stack, admin account. System hardening is skipped (it
+    # would firewall the CI runner) and HTTPS can't be issued for a fake
+    # domain, so the app is probed from inside its container.
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Let root use the runner's checkout
+        run: sudo git config --system --add safe.directory '*'
+      - name: One-line installer
+        run: >
+          sudo SPOTIFAST_DIR="$GITHUB_WORKSPACE" bash install.sh
+          --domain spotifast.ci.example --email ci@example.org
+          --admin ci-admin --skip-bootstrap
+      - name: Smoke test
+        run: |
+          sudo docker compose ps
+          sudo docker compose exec -T app python -c "import urllib.request as u; r = u.urlopen('http://127.0.0.1:8000/login'); assert r.status == 200; print('login page OK')"
+          sudo docker compose exec -T app python -m spotifast.cli list-users | grep '^ci-admin'
+          sudo docker compose exec -T app sunnify --version
+          sudo docker compose exec -T app sunnify info https://open.spotify.com/playlist/57Vocz0yXNDWWIUq0DGC0J --json | head -n 12
+      - name: Real download (informative, YouTube often bot-checks CI IPs)
+        continue-on-error: true
+        run: |
+          sudo docker compose exec -T app sunnify doctor --json || true
+          sudo docker compose exec -T app sh -c '
+            mkdir -p /work/ci/home /work/ci/out &&
+            HOME=/work/ci/home TMPDIR=/work/ci XDG_CACHE_HOME=/work/.cache DENO_DIR=/work/.cache/deno \
+            sunnify download https://open.spotify.com/track/7f9CuR2SVZ8jp4dhiTOzqK --out /work/ci/out --json'
+          sudo docker compose exec -T app sh -c 'ls -la /work/ci/out'
+      - name: Logs on failure
+        if: failure()
+        run: sudo docker compose logs --no-color --tail 200
