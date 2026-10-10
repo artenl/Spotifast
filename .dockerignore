@@ -1,0 +1,13 @@
+# Only what the image needs goes into the build context.
+*
+!Dockerfile
+!requirements.lock
+!spotifast/
+!vendor/sunnify/
+vendor/sunnify/.git
+vendor/sunnify/.github
+vendor/sunnify/tests
+vendor/sunnify/readmeAssets
+vendor/sunnify/web-app
+**/__pycache__
+**/*.pyc

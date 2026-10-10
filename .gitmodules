@@ -1,0 +1,3 @@
+[submodule "vendor/sunnify"]
+	path = vendor/sunnify
+	url = https://github.com/sunnypatell/sunnify-spotify-downloader.git

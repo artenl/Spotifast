@@ -1,0 +1,32 @@
+{
+	email {$ACME_EMAIL}
+	# No admin API: config only changes by restarting the container.
+	admin off
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+		-Via
+	}
+
+	# The health probe is for Docker only.
+	respond /healthz 404
+
+	request_body {
+		max_size 1MB
+	}
+
+	reverse_proxy app:8000 {
+		# progress is streamed (server-sent events): never buffer
+		flush_interval -1
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

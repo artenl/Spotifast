@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Spotifast{% endblock %}
+{% block scripts %}<script src="/static/app.js?v={{ asset_v }}" defer></script>{% endblock %}
+{% block content %}
+<section class="deck">
+  <div class="deck-head rise">
+    <p class="kicker">Table de copie · {{ user.username }}</p>
+    <h1 class="display">Colle un lien,<br><em>repars avec la cassette.</em></h1>
+    <p class="lede">Titre, album ou playlist Spotify. Le serveur prépare les fichiers, ton navigateur les télécharge, puis tout est effacé du serveur.</p>
+  </div>
+
+  <form id="lookup" class="slot rise" novalidate>
+    <label for="url" class="label">Lien Spotify</label>
+    <div class="slot-row">
+      <input id="url" name="url" type="url" inputmode="url" autocomplete="off" spellcheck="false"
+             placeholder="https://open.spotify.com/playlist/…" maxlength="512" required>
+      <button type="submit" class="btn primary" id="lookup-btn">Lire le lien</button>
+    </div>
+    <p class="hint" id="lookup-msg" role="status" aria-live="polite"></p>
+  </form>
+</section>
+
+<section id="preview" class="jcard" hidden aria-labelledby="pv-name">
+  <div class="jcard-spine" aria-hidden="true"><span id="pv-spine"></span></div>
+  <figure class="jcard-cover"><img id="pv-cover" alt="" referrerpolicy="no-referrer"></figure>
+  <div class="jcard-body">
+    <p class="kicker" id="pv-kind"></p>
+    <h2 id="pv-name" class="display small"></h2>
+    <p class="meta" id="pv-meta"></p>
+
+    <div class="controls">
+      <fieldset class="seg">
+        <legend class="label">Format</legend>
+        {% for key, label in formats.items() %}
+        <label><input type="radio" name="format" value="{{ key }}"{% if loop.first %} checked{% endif %}><span>{{ label }}</span></label>
+        {% endfor %}
+      </fieldset>
+      <fieldset class="seg">
+        <legend class="label">Qualité (kbps)</legend>
+        {% for q in qualities %}
+        <label><input type="radio" name="quality" value="{{ q }}"{% if loop.last %} checked{% endif %}><span>{{ q }}</span></label>
+        {% endfor %}
+      </fieldset>
+    </div>
+
+    <div class="start-row">
+      <button type="button" id="start" class="btn primary big">Lancer la copie</button>
+      <p class="hint" id="start-msg" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+  <details class="tracks" id="pv-details">
+    <summary><span id="pv-count"></span></summary>
+    <ol class="tracklist" id="pv-tracks"></ol>
+  </details>
+</section>
+
+<section class="jobs" aria-labelledby="jobs-title">
+  <div class="section-head">
+    <h2 id="jobs-title" class="display small">Tes copies</h2>
+    <p class="meta" id="quota">{{ limits.usedToday }} / {{ limits.dailyQuota }} titres sur 24 h</p>
+  </div>
+  <div id="job-list" class="job-list"></div>
+  <p class="empty" id="jobs-empty">Aucune copie pour l'instant. Les fichiers restent {{ limits.resultTtlMin }} min sur le serveur après la fin, puis sont supprimés.</p>
+</section>
+
+<template id="job-tpl">
+  <article class="job">
+    <div class="cassette" aria-hidden="true">
+      <span class="window"><span class="reel l"></span><span class="reel r"></span></span>
+      <span class="tape-label" data-f="label"></span>
+    </div>
+    <div class="job-body">
+      <div class="job-top">
+        <h3 data-f="title"></h3>
+        <span class="badge" data-f="status"></span>
+      </div>
+      <p class="meta" data-f="meta"></p>
+      <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" data-f="progress"><span data-f="bar"></span></div>
+      <p class="job-msg" data-f="message" role="status"></p>
+      <ul class="feed" data-f="feed"></ul>
+      <div class="job-actions">
+        <a class="btn primary" data-f="download" hidden download>Télécharger</a>
+        <button type="button" class="btn ghost" data-f="cancel" hidden>Annuler</button>
+        <span class="meta" data-f="expiry"></span>
+      </div>
+    </div>
+  </article>
+</template>
+{% endblock %}

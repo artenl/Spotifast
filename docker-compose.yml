@@ -1,0 +1,63 @@
+# Spotifast on a VPS: Caddy (HTTPS, the only thing exposed) -> app.
+#
+#   cp .env.example .env   # then set DOMAIN and ACME_EMAIL
+#   docker compose up -d --build
+#   docker compose exec app python -m spotifast.cli create-user <name> --admin
+
+name: spotifast
+
+x-hardening: &hardening
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+services:
+  app:
+    <<: *hardening
+    build: .
+    image: spotifast:latest
+    env_file: .env
+    environment:
+      SPOTIFAST_PUBLIC_ORIGIN: "https://${DOMAIN:?set DOMAIN in .env}"
+    # No `ports:` on purpose: the app is only reachable through Caddy.
+    expose: ["8000"]
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    volumes:
+      - data:/data   # accounts, sessions, history (small SQLite file)
+      - work:/work   # downloads in progress; emptied at start and after each job
+    pids_limit: 512
+    mem_limit: ${APP_MEM_LIMIT:-2g}
+    cpus: ${APP_CPUS:-2}
+
+  caddy:
+    <<: *hardening
+    image: caddy:2-alpine
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    cap_add: [NET_BIND_SERVICE]
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+    tmpfs:
+      - /tmp
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data     # TLS certificates
+      - caddy_config:/config
+    mem_limit: 256m
+
+volumes:
+  data:
+  work:
+  caddy_data:
+  caddy_config:

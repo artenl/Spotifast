@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Connexion · Spotifast{% endblock %}
+{% block body_class %}is-login{% endblock %}
+{% block main_class %}login{% endblock %}
+{% block content %}
+<section class="login-card rise">
+  <div class="login-reels" aria-hidden="true"><span class="reel"></span><span class="reel"></span></div>
+  <h1 class="wordmark big">Spoti<em>fast</em></h1>
+  <p class="lede">La table de copie privée. Sur invitation uniquement.</p>
+
+  {% if error %}<p class="alert bad" role="alert">{{ error }}</p>{% endif %}
+
+  <form method="post" action="/login" class="stack" autocomplete="on">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label class="field">
+      <span class="label">Identifiant</span>
+      <input name="username" autocomplete="username" required maxlength="64" value="{{ username or '' }}" autofocus autocapitalize="none" spellcheck="false">
+    </label>
+    <label class="field">
+      <span class="label">Mot de passe</span>
+      <input name="password" type="password" autocomplete="current-password" required maxlength="256">
+    </label>
+    <button type="submit" class="btn primary big">Entrer</button>
+  </form>
+  <p class="fine">Pas de compte ? Demande à la personne qui t'a donné ce lien.</p>
+</section>
+{% endblock %}

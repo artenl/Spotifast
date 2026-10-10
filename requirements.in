@@ -1,0 +1,14 @@
+# Spotifast's own runtime dependencies
+fastapi
+uvicorn[standard]
+jinja2
+argon2-cffi
+python-multipart
+# Sunnify's runtime dependencies (Sunnify itself is installed unmodified
+# from vendor/sunnify with --no-deps, see Dockerfile)
+mutagen>=1.46.0
+PyQt6>=6.11
+requests>=2.32.2
+yt-dlp[default]
+# JavaScript runtime yt-dlp needs to solve YouTube's player challenges
+deno

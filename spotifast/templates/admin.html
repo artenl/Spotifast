@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Admin · Spotifast{% endblock %}
+{% block content %}
+<section class="rise">
+  <p class="kicker">Administration</p>
+  <h1 class="display">Le cercle</h1>
+
+  <dl class="stats">
+    <div><dt>En cours</dt><dd>{{ stats.running }} / {{ stats.slots }}</dd></div>
+    <div><dt>En attente</dt><dd>{{ stats.queued }}</dd></div>
+    <div><dt>Disque libre</dt><dd>{{ stats.free_gb }} Go</dd></div>
+    <div><dt>Comptes</dt><dd>{{ users|length }}</dd></div>
+  </dl>
+
+  {% if error %}<p class="alert bad" role="alert">{{ error }}</p>{% endif %}
+  {% if created %}
+  <div class="alert ok secret" role="status">
+    <p>{% if created.reset %}Nouveau mot de passe temporaire pour{% else %}Compte créé :{% endif %} <strong>{{ created.username }}</strong></p>
+    <p class="secret-row"><code id="temp-pass">{{ created.password }}</code>
+      <button type="button" class="btn ghost small" data-copy="temp-pass">Copier</button></p>
+    <p class="fine">Affiché une seule fois. Envoie-le par un canal privé. Il devra être changé à la première connexion.</p>
+  </div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2 class="display small">Inviter quelqu'un</h2>
+  <form method="post" action="/admin/users" class="inline-form">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label class="field grow">
+      <span class="label">Identifiant</span>
+      <input name="username" required pattern="[A-Za-z0-9_.\-]{3,32}" maxlength="32" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="ex. camille">
+    </label>
+    <label class="check"><input type="checkbox" name="is_admin" value="1"> <span>Admin</span></label>
+    <button type="submit" class="btn primary">Créer le compte</button>
+  </form>
+</section>
+
+<section>
+  <h2 class="display small">Comptes</h2>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Identifiant</th><th>Rôle</th><th>État</th><th>Dernière connexion</th><th><span class="sr">Actions</span></th></tr></thead>
+      <tbody>
+      {% for u in users %}
+        <tr>
+          <td><strong>{{ u.username }}</strong>{% if u.id == user.id %} <span class="tag">toi</span>{% endif %}</td>
+          <td>{{ "Admin" if u.is_admin else "Membre" }}</td>
+          <td>
+            {% if not u.is_active %}<span class="tag bad">Désactivé</span>
+            {% elif u.must_change_password %}<span class="tag warn">Invitation en attente</span>
+            {% else %}<span class="tag ok">Actif</span>{% endif %}
+          </td>
+          <td>{{ u.last_login_at|dt }}</td>
+          <td class="actions">
+            <form method="post" action="/admin/users/{{ u.id }}/reset" data-confirm="Générer un nouveau mot de passe temporaire pour {{ u.username }} ? Ses sessions seront fermées.">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <button type="submit" class="btn ghost small">Réinitialiser</button>
+            </form>
+            {% if u.id != user.id %}
+            <form method="post" action="/admin/users/{{ u.id }}/active">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <input type="hidden" name="active" value="{{ '0' if u.is_active else '1' }}">
+              <button type="submit" class="btn ghost small">{{ "Désactiver" if u.is_active else "Réactiver" }}</button>
+            </form>
+            <form method="post" action="/admin/users/{{ u.id }}/delete" data-confirm="Supprimer définitivement le compte {{ u.username }} ?">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <button type="submit" class="btn danger small">Supprimer</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="display small">Activité récente</h2>
+  {% if jobs %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Date</th><th>Qui</th><th>Quoi</th><th>Titres</th><th>Résultat</th></tr></thead>
+      <tbody>
+      {% for j in jobs %}
+        <tr>
+          <td class="nowrap">{{ j.created_at|dt }}</td>
+          <td>{{ j.username }}</td>
+          <td class="clip" title="{{ j.title }}">{{ j.title }} <span class="tag">{{ j.kind }}</span></td>
+          <td class="nowrap">{{ j.landed }} / {{ j.track_total }}</td>
+          <td><span class="tag {{ 'ok' if j.status == 'done' else 'warn' if j.status in ('partial', 'running', 'queued') else 'bad' }}">{{ j.status|status_fr }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty">Aucune activité pour l'instant.</p>
+  {% endif %}
+</section>
+{% endblock %}

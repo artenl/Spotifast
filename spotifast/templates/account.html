@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Mon compte · Spotifast{% endblock %}
+{% block content %}
+<section class="narrow rise">
+  <p class="kicker">Compte</p>
+  <h1 class="display">{{ user.username }}</h1>
+
+  {% if user.must_change_password and not success %}
+  <p class="alert warn" role="status">Tu utilises un mot de passe temporaire. Choisis le tien pour continuer.</p>
+  {% endif %}
+  {% if error %}<p class="alert bad" role="alert">{{ error }}</p>{% endif %}
+  {% if success %}<p class="alert ok" role="status">{{ success }} <a href="/">Aller à la table de copie →</a></p>{% endif %}
+
+  <form method="post" action="/account/password" class="stack panel">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="text" name="username" value="{{ user.username }}" autocomplete="username" hidden>
+    <label class="field">
+      <span class="label">Mot de passe actuel</span>
+      <input name="current" type="password" autocomplete="current-password" required maxlength="256">
+    </label>
+    <label class="field">
+      <span class="label">Nouveau mot de passe</span>
+      <input name="new" type="password" autocomplete="new-password" required minlength="12" maxlength="128">
+      <span class="hint">12 caractères minimum. Une phrase de quelques mots, c'est parfait.</span>
+    </label>
+    <label class="field">
+      <span class="label">Confirmation</span>
+      <input name="confirm" type="password" autocomplete="new-password" required minlength="12" maxlength="128">
+    </label>
+    <button type="submit" class="btn primary">Changer le mot de passe</button>
+  </form>
+</section>
+{% endblock %}
